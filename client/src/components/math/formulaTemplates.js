@@ -1,0 +1,17 @@
+export const FORMULA_TEMPLATES = [
+  { label: "Position Sizing", latex: "Risk = AccountSize \\times RiskPercent" },
+  { label: "Kelly Criterion", latex: "f^{*} = \\frac{bp - q}{b}" },
+  { label: "Sharpe Ratio", latex: "S = \\frac{R_p - R_f}{\\sigma_p}" },
+  { label: "Sortino Ratio", latex: "Sortino = \\frac{R_p - R_f}{\\sigma_{downside}}" },
+  { label: "Calmar Ratio", latex: "Calmar = \\frac{CAGR}{|MaxDrawdown|}" },
+  { label: "Expectancy", latex: "E = (WinRate \\times AvgWin) - (LossRate \\times AvgLoss)" },
+  { label: "Max Drawdown", latex: "DD_{max} = \\max_{t} \\left( \\frac{Peak_t - Trough_t}{Peak_t} \\right)" },
+  { label: "ATR", latex: "ATR_n = \\frac{1}{n}\\sum_{i=1}^{n} TR_i" },
+  { label: "RSI", latex: "RSI = 100 - \\frac{100}{1 + RS}, \\quad RS = \\frac{AvgGain}{AvgLoss}" },
+  { label: "Z-Score", latex: "Z = \\frac{x - \\mu}{\\sigma}" },
+  { label: "Velocity of Price", latex: "v = \\frac{dP}{dt}" },
+  { label: "Acceleration of Price", latex: "a = \\frac{dv}{dt}" },
+  { label: "Jerk of Price", latex: "j = \\frac{da}{dt}" },
+  { label: "Market Reynolds Number", latex: "Re = \\frac{V \\cdot \\frac{dP}{dt}}{\\sigma}" },
+  { label: "Probability Model (Normal)", latex: "f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}" },
+];

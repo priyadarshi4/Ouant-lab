@@ -13,6 +13,15 @@ const scorecardSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const formulaSchema = new mongoose.Schema(
+  {
+    label: { type: String, required: true }, // e.g. "Position Sizing Formula"
+    latex: { type: String, required: true }, // raw LaTeX, rendered client-side with KaTeX
+    note: { type: String, default: "" },
+  },
+  { _id: true }
+);
+
 const strategySchema = new mongoose.Schema(
   {
     // --- Basic Information ---
@@ -27,6 +36,19 @@ const strategySchema = new mongoose.Schema(
     status: { type: String, enum: ["Draft", "Testing", "Live", "Archived"], default: "Draft" },
     tags: [{ type: String, trim: true }],
     description: { type: String, default: "" },
+    coverImageUrl: { type: String, default: "" },
+
+    // --- Research paper framing sections ---
+    executiveSummary: { type: String, default: "" },
+    failureConditions: { type: String, default: "" },
+    marketRegimes: { type: String, default: "" },
+    conclusion: { type: String, default: "" },
+
+    // --- Mathematical Framework (KaTeX-rendered formulas) ---
+    mathematicalFramework: { type: [formulaSchema], default: [] },
+
+    // --- Research maturity score (auto-derived from documentation completeness) ---
+    researchScore: { type: Number, min: 0, max: 100, default: 0 },
 
     // --- Core Strategy Documentation ---
     documentation: {
@@ -103,5 +125,26 @@ const strategySchema = new mongoose.Schema(
 );
 
 strategySchema.index({ name: "text", description: "text", tags: "text" });
+
+// Research maturity score: rewards a fully fleshed-out research record
+// (documentation depth, math framework, code, backtests) rather than
+// raw performance — a thin strategy with great luck still scores low here.
+strategySchema.methods.computeResearchScore = function (codeVersionCount = 0, backtestCount = 0, attachmentCount = 0) {
+  const docFields = Object.values(this.documentation?.toObject?.() || this.documentation || {});
+  const filledDocFields = docFields.filter((v) => v && String(v).trim().length > 10).length;
+  const docScore = Math.min(40, (filledDocFields / 15) * 40);
+
+  const sectionFields = [this.executiveSummary, this.failureConditions, this.marketRegimes, this.conclusion];
+  const filledSections = sectionFields.filter((v) => v && v.trim().length > 10).length;
+  const sectionScore = Math.min(15, (filledSections / 4) * 15);
+
+  const mathScore = Math.min(15, (this.mathematicalFramework?.length || 0) * 5);
+  const codeScore = Math.min(10, codeVersionCount * 5);
+  const backtestScore = Math.min(15, backtestCount * 5);
+  const mediaScore = Math.min(5, attachmentCount * 1);
+
+  this.researchScore = Math.round(docScore + sectionScore + mathScore + codeScore + backtestScore + mediaScore);
+  return this.researchScore;
+};
 
 export default mongoose.model("Strategy", strategySchema);

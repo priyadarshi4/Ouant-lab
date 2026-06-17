@@ -8,6 +8,7 @@ import { ThemeProvider, CssBaseline } from "@mui/material";
 import { store } from "./app/store.js";
 import { muiTheme } from "./theme/muiTheme.js";
 import App from "./App.jsx";
+import "katex/dist/katex.min.css";
 import "./index.css";
 
 const queryClient = new QueryClient({

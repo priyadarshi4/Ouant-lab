@@ -92,7 +92,25 @@ export default function CodeRepository() {
           ) : !versionsData?.versions?.length ? (
             <EmptyState title="No code versions yet" description="Add the first Pine Script version for this strategy." />
           ) : (
-            <div className="grid lg:grid-cols-3 gap-4">
+            <>
+              <GlassCard>
+                <h3 className="text-xs uppercase tracking-wide text-ink-secondary mb-3">Code Activity Timeline</h3>
+                <div className="relative h-10">
+                  <div className="absolute left-0 right-0 top-1/2 h-px bg-white/10" />
+                  <div className="flex justify-between relative">
+                    {[...versionsData.versions].reverse().map((v) => (
+                      <div key={v._id} className="flex flex-col items-center gap-1.5 group relative">
+                        <span className="w-2.5 h-2.5 rounded-full bg-cyan border-2 border-panel" />
+                        <span className="text-[10px] font-mono text-ink-secondary opacity-0 group-hover:opacity-100 transition-opacity absolute top-4 whitespace-nowrap">
+                          {v.versionLabel} · {new Date(v.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </GlassCard>
+
+              <div className="grid lg:grid-cols-3 gap-4">
               <div className="space-y-2 lg:col-span-1">
                 {versionsData.versions.map((v) => (
                   <GlassCard key={v._id} className="flex items-center justify-between">
@@ -135,7 +153,8 @@ export default function CodeRepository() {
                   <EmptyState title="Pick versions A and B" description="Select two versions on the left to compare their code line by line." />
                 )}
               </div>
-            </div>
+              </div>
+            </>
           )}
         </>
       )}

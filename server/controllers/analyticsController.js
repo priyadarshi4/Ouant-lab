@@ -1,6 +1,7 @@
 import Strategy from "../models/Strategy.js";
 import Backtest from "../models/Backtest.js";
 import ResearchNote from "../models/ResearchNote.js";
+import Indicator from "../models/Indicator.js";
 
 // GET /api/analytics/dashboard
 export const getDashboardSummary = async (req, res, next) => {
@@ -58,6 +59,62 @@ export const getDashboardSummary = async (req, res, next) => {
         return acc;
       }, {}),
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/analytics/knowledge-graph
+// Assembles a node/link graph connecting strategies, the indicators they use,
+// the symbols they've been backtested on, their research notes, and the
+// market regimes they've been tested under.
+export const getKnowledgeGraph = async (req, res, next) => {
+  try {
+    const [strategies, indicators, backtests, notes] = await Promise.all([
+      Strategy.find().populate("indicators", "name"),
+      Indicator.find(),
+      Backtest.find(),
+      ResearchNote.find(),
+    ]);
+
+    const nodes = [];
+    const links = [];
+    const seen = new Set();
+    const addNode = (id, label, type) => {
+      if (seen.has(id)) return;
+      seen.add(id);
+      nodes.push({ id, label, type });
+    };
+
+    strategies.forEach((s) => addNode(`strategy:${s._id}`, s.name, "strategy"));
+    indicators.forEach((ind) => addNode(`indicator:${ind._id}`, ind.name, "indicator"));
+
+    strategies.forEach((s) => {
+      (s.indicators || []).forEach((ind) => {
+        if (ind?._id) links.push({ source: `strategy:${s._id}`, target: `indicator:${ind._id}` });
+      });
+    });
+
+    const regimeLabels = { Bull: "Bull Market", Bear: "Bear Market", Sideways: "Sideways Market", Mixed: "Mixed Regime" };
+    backtests.forEach((b) => {
+      if (b.symbol) {
+        addNode(`symbol:${b.symbol}`, b.symbol, "symbol");
+        links.push({ source: `strategy:${b.strategy}`, target: `symbol:${b.symbol}` });
+      }
+      if (b.marketPhase && regimeLabels[b.marketPhase]) {
+        addNode(`regime:${b.marketPhase}`, regimeLabels[b.marketPhase], "regime");
+        links.push({ source: `strategy:${b.strategy}`, target: `regime:${b.marketPhase}` });
+      }
+    });
+
+    notes.forEach((n) => {
+      if (n.strategy) {
+        addNode(`note:${n._id}`, n.title, "note");
+        links.push({ source: `strategy:${n.strategy}`, target: `note:${n._id}` });
+      }
+    });
+
+    res.json({ nodes, links });
   } catch (err) {
     next(err);
   }

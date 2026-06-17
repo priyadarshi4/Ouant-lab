@@ -1,6 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosClient from "../../api/axiosClient.js";
 
+function downloadBlob(blobData, filename) {
+  const url = window.URL.createObjectURL(new Blob([blobData]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+export function useAutoGenerateReport() {
+  return useMutation({
+    mutationFn: async (strategyId) => (await axiosClient.post("/reports/auto-generate", { strategy: strategyId })).data,
+  });
+}
+
+export async function downloadReportDocx(id, title) {
+  const res = await axiosClient.get(`/reports/${id}/docx`, { responseType: "blob" });
+  downloadBlob(res.data, `${title || "report"}.docx`);
+}
+
+export async function downloadReportHtml(id, title) {
+  const res = await axiosClient.get(`/reports/${id}/html`, { responseType: "blob" });
+  downloadBlob(res.data, `${title || "report"}.html`);
+}
+
 export function useReports(strategy) {
   return useQuery({
     queryKey: ["reports", strategy],

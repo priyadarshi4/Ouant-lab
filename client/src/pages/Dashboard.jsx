@@ -7,6 +7,7 @@ import StatTile from "../components/ui/StatTile.jsx";
 import GlassCard from "../components/ui/GlassCard.jsx";
 import Spinner from "../components/ui/Spinner.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
+import CandlestickStream from "../components/layout/CandlestickStream.jsx";
 
 export default function Dashboard() {
   const { data, isLoading, isError } = useDashboardSummary();
@@ -23,11 +24,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold">Mission Control</h1>
-        <p className="text-ink-secondary text-sm mt-1">
-          A live snapshot of every strategy, backtest, and research thread in the lab.
-        </p>
+      <div className="glass-panel rounded-xl overflow-hidden">
+        <CandlestickStream height={56} />
+        <div className="px-5 pb-4 pt-1">
+          <h1 className="font-display text-2xl font-semibold">Mission Control</h1>
+          <p className="text-ink-secondary text-sm mt-1">
+            A live snapshot of every strategy, backtest, and research thread in the lab.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

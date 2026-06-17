@@ -14,3 +14,10 @@ export function useCorrelationMatrix() {
     queryFn: async () => (await axiosClient.get("/analytics/correlation")).data,
   });
 }
+
+export function useKnowledgeGraph() {
+  return useQuery({
+    queryKey: ["knowledgeGraph"],
+    queryFn: async () => (await axiosClient.get("/analytics/knowledge-graph")).data,
+  });
+}

@@ -10,8 +10,16 @@ const attachmentSchema = new mongoose.Schema(
     category: {
       type: String,
       enum: [
-        "Equity Curve", "Drawdown Curve", "Distribution Graph", "Trade Analysis",
-        "Monte Carlo Analysis", "Walk Forward Results", "Research Attachment", "Other",
+        // Strategy media
+        "Strategy Diagram", "Market Structure Diagram", "Flowchart", "Signal Example",
+        "Entry Example", "Exit Example", "Annotated Chart", "Research Note Image",
+        // Backtest media
+        "Equity Curve", "Drawdown Curve", "Monthly Returns", "Yearly Returns",
+        "Distribution Curve", "Trade Distribution", "Monte Carlo Analysis", "Walk Forward Results",
+        "Parameter Sensitivity", "Optimization Result", "TradingView Screenshot",
+        "Performance Summary Screenshot", "List of Trades Screenshot",
+        // Generic / profile
+        "Research Attachment", "Profile Image", "Banner Image", "Other",
       ],
       default: "Other",
     },

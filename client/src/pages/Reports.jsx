@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { Plus, Download, Trash2, X } from "lucide-react";
-import { useReports, useCreateReport, useDeleteReport, downloadReportPdf } from "../features/reports/api.js";
+import { Plus, Download, Trash2, X, Sparkles } from "lucide-react";
+import {
+  useReports, useCreateReport, useDeleteReport,
+  downloadReportPdf, downloadReportDocx, downloadReportHtml, useAutoGenerateReport,
+} from "../features/reports/api.js";
 import { useStrategies } from "../features/strategies/api.js";
 import GlassCard from "../components/ui/GlassCard.jsx";
 import Spinner from "../components/ui/Spinner.jsx";
@@ -25,7 +28,20 @@ function NewReportForm({ onClose, strategies }) {
   const [title, setTitle] = useState("");
   const [strategy, setStrategy] = useState("");
   const [sections, setSections] = useState({});
+  const [aiNote, setAiNote] = useState(null);
   const createMutation = useCreateReport();
+  const autoGenerateMutation = useAutoGenerateReport();
+
+  const handleAutoGenerate = async () => {
+    if (!strategy) return;
+    const res = await autoGenerateMutation.mutateAsync(strategy);
+    setSections(res.sections);
+    setAiNote(res.aiAssisted ? "Drafted with Claude from your stored research data." : "Auto-filled from your stored research data (set ANTHROPIC_API_KEY on the server for AI-polished prose).");
+    if (!title) {
+      const s = strategies?.find((x) => x._id === strategy);
+      if (s) setTitle(`${s.name} — Research Report`);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,6 +63,17 @@ function NewReportForm({ onClose, strategies }) {
             {strategies?.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
           </select>
         </div>
+
+        <button
+          type="button"
+          onClick={handleAutoGenerate}
+          disabled={!strategy || autoGenerateMutation.isPending}
+          className="flex items-center gap-2 px-4 py-2 rounded-md border border-cyan/30 text-cyan text-sm hover:bg-cyan/10 transition-colors disabled:opacity-50"
+        >
+          <Sparkles size={14} /> {autoGenerateMutation.isPending ? "Drafting from research data..." : "Auto-Generate from Strategy Data"}
+        </button>
+        {aiNote && <p className="text-xs text-ink-secondary">{aiNote}</p>}
+
         {SECTIONS.map(([key, label]) => (
           <div key={key}>
             <label className="block text-xs uppercase tracking-wide text-ink-secondary mb-1">{label}</label>
@@ -78,7 +105,7 @@ export default function Reports() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold">Reports</h1>
-          <p className="text-ink-secondary text-sm mt-1">Institutional-grade research reports, exportable as PDF.</p>
+          <p className="text-ink-secondary text-sm mt-1">Institutional-grade research reports — auto-drafted, then exported as PDF, DOCX, or HTML.</p>
         </div>
         <button onClick={() => setShowForm((s) => !s)} className="flex items-center gap-2 px-4 py-2 rounded-md bg-cyan text-void font-display font-semibold text-sm hover:shadow-glow transition-shadow">
           <Plus size={16} /> New Report
@@ -94,7 +121,7 @@ export default function Reports() {
       ) : (
         <div className="space-y-3">
           {data.reports.map((r) => (
-            <GlassCard key={r._id} className="flex items-center justify-between">
+            <GlassCard key={r._id} className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h3 className="font-medium">{r.title}</h3>
                 <div className="text-xs text-ink-secondary">{r.strategy?.name} · {new Date(r.createdAt).toLocaleDateString()}</div>
@@ -102,6 +129,12 @@ export default function Reports() {
               <div className="flex items-center gap-3">
                 <button onClick={() => downloadReportPdf(r._id, r.title)} className="flex items-center gap-1.5 text-cyan text-sm hover:underline">
                   <Download size={14} /> PDF
+                </button>
+                <button onClick={() => downloadReportDocx(r._id, r.title)} className="flex items-center gap-1.5 text-signal-blue text-sm hover:underline">
+                  <Download size={14} /> DOCX
+                </button>
+                <button onClick={() => downloadReportHtml(r._id, r.title)} className="flex items-center gap-1.5 text-signal-profit text-sm hover:underline">
+                  <Download size={14} /> HTML
                 </button>
                 <button onClick={() => deleteMutation.mutate(r._id)}><Trash2 size={14} className="text-ink-faint hover:text-signal-loss" /></button>
               </div>

@@ -9,6 +9,7 @@ import connectDB from "./config/db.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import strategyRoutes from "./routes/strategyRoutes.js";
 import backtestRoutes from "./routes/backtestRoutes.js";
 import researchNoteRoutes from "./routes/researchNoteRoutes.js";
@@ -34,6 +35,7 @@ app.use("/api", limiter);
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "Priyadarshi Quant Lab API" }));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/strategies", strategyRoutes);
 app.use("/api/backtests", backtestRoutes);
 app.use("/api/research-notes", researchNoteRoutes);

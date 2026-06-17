@@ -8,6 +8,8 @@ import {
   toggleFavorite,
   updateScorecard,
   compareStrategies,
+  getVersionHistory,
+  rollbackVersion,
 } from "../controllers/strategyController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -23,5 +25,7 @@ router.put("/:id", updateStrategy);
 router.delete("/:id", deleteStrategy);
 router.patch("/:id/favorite", toggleFavorite);
 router.patch("/:id/scorecard", updateScorecard);
+router.get("/:id/versions", getVersionHistory);
+router.post("/:id/versions/:snapshotId/rollback", rollbackVersion);
 
 export default router;

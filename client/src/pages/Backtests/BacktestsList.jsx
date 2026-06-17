@@ -142,6 +142,9 @@ export default function BacktestsList() {
                   <td className="py-2 pr-4 font-mono">{bt.metrics?.sharpeRatio ?? "—"}</td>
                   <td className="py-2 pr-4 font-mono">{bt.metrics?.totalTrades ?? "—"}</td>
                   <td className="py-2 pr-4">
+                    <Link to={`/backtests/${bt._id}`} className="text-cyan text-xs hover:underline mr-3">
+                      View
+                    </Link>
                     <button onClick={() => deleteMutation.mutate(bt._id)} className="text-ink-faint hover:text-signal-loss text-xs">
                       Delete
                     </button>

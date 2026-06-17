@@ -2,6 +2,9 @@ import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../config/cloudinary.js";
 import Attachment from "../models/Attachment.js";
+import Strategy from "../models/Strategy.js";
+import CodeVersion from "../models/CodeVersion.js";
+import Backtest from "../models/Backtest.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 const storage = new CloudinaryStorage({
@@ -10,6 +13,19 @@ const storage = new CloudinaryStorage({
 });
 
 export const upload = multer({ storage });
+
+const touchResearchScore = async (strategyId) => {
+  if (!strategyId) return;
+  const strategy = await Strategy.findById(strategyId);
+  if (!strategy) return;
+  const [codeCount, backtestCount, attachmentCount] = await Promise.all([
+    CodeVersion.countDocuments({ strategy: strategyId }),
+    Backtest.countDocuments({ strategy: strategyId }),
+    Attachment.countDocuments({ relatedStrategy: strategyId }),
+  ]);
+  strategy.computeResearchScore(codeCount, backtestCount, attachmentCount);
+  await strategy.save();
+};
 
 // POST /api/attachments  (multipart/form-data, field name: "file")
 export const uploadAttachment = asyncHandler(async (req, res) => {
@@ -38,6 +54,11 @@ export const uploadAttachment = asyncHandler(async (req, res) => {
     url: req.file.path,
     cloudinaryPublicId: req.file.filename,
   });
+
+  if (relatedBacktest) {
+    await Backtest.findByIdAndUpdate(relatedBacktest, { $push: { chartAttachments: attachment._id } });
+  }
+  await touchResearchScore(relatedStrategy);
 
   res.status(201).json({ attachment });
 });
