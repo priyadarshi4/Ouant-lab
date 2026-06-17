@@ -55,11 +55,6 @@ public/uploads/
 # Cloudinary
 cloudinary-config.json
 
-# Generated Reports
-reports/
-exports/
-*.pdf
-*.csv
 
 # React
 client/node_modules/
