@@ -1,0 +1,27 @@
+import express from "express";
+import {
+  getStrategies,
+  getStrategyById,
+  createStrategy,
+  updateStrategy,
+  deleteStrategy,
+  toggleFavorite,
+  updateScorecard,
+  compareStrategies,
+} from "../controllers/strategyController.js";
+import { protect } from "../middleware/auth.js";
+
+const router = express.Router();
+
+router.use(protect);
+
+router.get("/", getStrategies);
+router.post("/", createStrategy);
+router.post("/compare", compareStrategies);
+router.get("/:id", getStrategyById);
+router.put("/:id", updateStrategy);
+router.delete("/:id", deleteStrategy);
+router.patch("/:id/favorite", toggleFavorite);
+router.patch("/:id/scorecard", updateScorecard);
+
+export default router;

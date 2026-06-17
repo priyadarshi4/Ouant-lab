@@ -1,0 +1,78 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build Files
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# IntelliJ
+.idea/
+
+# Coverage
+coverage/
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Vite
+.vite/
+
+# Temporary Files
+tmp/
+temp/
+
+# MongoDB
+data/db/
+
+# Uploads
+uploads/
+public/uploads/
+
+# Cloudinary
+cloudinary-config.json
+
+# Generated Reports
+reports/
+exports/
+*.pdf
+*.csv
+
+# React
+client/node_modules/
+client/dist/
+
+# Express
+server/node_modules/
+
+# Environment Files
+server/.env
+client/.env
+
+# Optional Lock Files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
