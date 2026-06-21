@@ -45,10 +45,15 @@ On top of the Phase 1 platform, this build adds:
 - **Report Generator auto-fill** — an "Auto-Generate from Strategy Data"
   button drafts every report section from the strategy's actual stored
   documentation, latest backtest metrics, and research notes. If
-  `ANTHROPIC_API_KEY` is set on the server, Claude polishes the draft into
+  `GEMINI_API_KEY` is set on the server, Gemini polishes the draft into
   analyst prose (numbers are never invented — only the wording is improved);
   without a key, it still works using the deterministic template. Reports
   now export as PDF, DOCX, or standalone HTML.
+- **AI Smart Import** — on the Backtest Detail page, drop a TradingView
+  screenshot and Gemini reads every visible metric (Performance Summary,
+  Trade Statistics, dates, symbol) and saves it directly — no manual
+  form-filling. A CSV importer next to it populates the equity curve /
+  drawdown chart from exported equity data. Both require `GEMINI_API_KEY`.
 - **Profile system** — avatar + banner upload, bio, education, skills,
   GitHub/LinkedIn/portfolio links, research interests, favorite markets,
   trading style, and experience level, all editable from Settings.
@@ -62,11 +67,14 @@ On top of the Phase 1 platform, this build adds:
 
 ### New environment variable
 
-Add to `server/.env` if you want AI-polished report drafting (optional —
-auto-generate works without it):
+Add to `server/.env` for AI screenshot extraction and AI-polished report
+drafting. Get a free key (no credit card) at https://aistudio.google.com/apikey:
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIza...
+GEMINI_MODEL=gemini-2.5-flash
 ```
+Screenshot extraction (Smart Import) requires this key. Report auto-generate
+works without it too, just with template wording instead of AI-polished prose.
 
 ---
 
@@ -85,7 +93,9 @@ ANTHROPIC_API_KEY=sk-ant-...
 - Dashboard analytics + knowledge-graph aggregation endpoints
 - Cloudinary file uploads (equity curves, CSVs, PDFs, profile images) via Multer
 - PDF (PDFKit), DOCX (`docx`), and HTML report export, plus data-grounded
-  auto-generation (optionally AI-polished via the Anthropic SDK)
+  auto-generation (optionally AI-polished via Google's Gemini API)
+- AI screenshot extraction (Google Gemini vision) for one-click backtest
+  metric entry, plus CSV import for equity curve data
 - Helmet, CORS, rate limiting, centralized error handling
 
 **Frontend (`/client`)**
@@ -119,7 +129,10 @@ Edit `server/.env`:
 - `CLOUDINARY_*` — create a free account at https://cloudinary.com if you want
   file/image uploads to work (equity curve screenshots, CSVs, PDFs, avatars).
   The app runs fine without this; only upload endpoints need it.
-- `ANTHROPIC_API_KEY` — optional, enables AI-polished report drafting.
+- `GEMINI_API_KEY` — free at https://aistudio.google.com/apikey, no credit
+  card required. Required for the Smart Import screenshot feature on the
+  Backtest Detail page; optional for AI-polished report drafting (the
+  Report Generator's auto-fill still works without it, using a template).
 
 ```bash
 npm run dev
@@ -180,6 +193,5 @@ Everything else is functional end to end: auth, CRUD across all resources,
 KaTeX math rendering, version control with rollback, the research-paper
 strategy layout, the full backtest metrics model with charts, the 10-strategy
 comparison engine, report auto-generation and multi-format export, the
-
 profile system, and the knowledge graph.
 

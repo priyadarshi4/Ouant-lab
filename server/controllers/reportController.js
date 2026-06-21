@@ -5,6 +5,7 @@ import Strategy from "../models/Strategy.js";
 import Backtest from "../models/Backtest.js";
 import ResearchNote from "../models/ResearchNote.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { getGeminiClient, GEMINI_MODEL, cleanJsonResponse } from "../config/gemini.js";
 
 const SECTION_ORDER = [
   ["executiveSummary", "Executive Summary"],
@@ -23,7 +24,7 @@ const fmt = (v, suffix = "") => (typeof v === "number" ? `${v.toFixed(2)}${suffi
 
 // Deterministic, data-grounded section drafting from whatever the strategy
 // record actually contains. Used as the always-available fallback, and as
-// the input fed to Claude when ANTHROPIC_API_KEY is configured.
+// the input fed to Gemini when GEMINI_API_KEY is configured.
 function templateSections(strategy, latestBacktest, notes) {
   const m = latestBacktest?.metrics || {};
   return {
@@ -58,7 +59,7 @@ async function gatherReportContext(strategyId) {
 
 // POST /api/reports/auto-generate  body: { strategy: strategyId }
 // Returns a sections object the user can review/edit before saving as a Report.
-// If ANTHROPIC_API_KEY is set, asks Claude to turn the templated draft into
+// If GEMINI_API_KEY is set, asks Gemini to turn the templated draft into
 // polished analyst prose; otherwise returns the deterministic template as-is.
 export const autoGenerateReport = asyncHandler(async (req, res) => {
   const { strategy: strategyId } = req.body;
@@ -69,29 +70,21 @@ export const autoGenerateReport = asyncHandler(async (req, res) => {
   }
   const draft = templateSections(context.strategy, context.latestBacktest, context.notes);
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const gemini = getGeminiClient();
+  if (!gemini) {
     return res.json({ sections: draft, aiAssisted: false });
   }
 
   try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1500,
-      messages: [
-        {
-          role: "user",
-          content:
-            "Rewrite each section below into clear, professional quant-research analyst prose. " +
-            "Keep all numbers and facts exactly as given — do not invent data. " +
-            "Return ONLY valid JSON with the same keys, no markdown fences, no commentary.\n\n" +
-            JSON.stringify(draft),
-        },
-      ],
+    const response = await gemini.models.generateContent({
+      model: GEMINI_MODEL,
+      contents:
+        "Rewrite each section below into clear, professional quant-research analyst prose. " +
+        "Keep all numbers and facts exactly as given — do not invent data. " +
+        "Return ONLY valid JSON with the same keys, no markdown fences, no commentary.\n\n" +
+        JSON.stringify(draft),
     });
-    const text = msg.content.find((b) => b.type === "text")?.text || "";
-    const cleaned = text.replace(/```json|```/g, "").trim();
+    const cleaned = cleanJsonResponse(response.text || "");
     const polished = JSON.parse(cleaned);
     return res.json({ sections: { ...draft, ...polished }, aiAssisted: true });
   } catch (err) {

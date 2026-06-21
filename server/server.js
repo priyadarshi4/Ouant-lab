@@ -19,7 +19,6 @@ import attachmentRoutes from "./routes/attachmentRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import extractRoutes from "./routes/extractRoutes.js";
-import extractionRoutes from "./routes/extractionRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -47,7 +46,6 @@ app.use("/api/attachments", attachmentRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/extract", extractRoutes);
-app.use("/api/extract", extractionRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

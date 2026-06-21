@@ -36,7 +36,7 @@ function NewReportForm({ onClose, strategies }) {
     if (!strategy) return;
     const res = await autoGenerateMutation.mutateAsync(strategy);
     setSections(res.sections);
-    setAiNote(res.aiAssisted ? "Drafted with Claude from your stored research data." : "Auto-filled from your stored research data (set ANTHROPIC_API_KEY on the server for AI-polished prose).");
+    setAiNote(res.aiAssisted ? "Drafted with Gemini from your stored research data." : "Auto-filled from your stored research data (set GEMINI_API_KEY on the server for AI-polished prose).");
     if (!title) {
       const s = strategies?.find((x) => x._id === strategy);
       if (s) setTitle(`${s.name} — Research Report`);

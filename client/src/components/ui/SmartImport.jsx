@@ -86,7 +86,7 @@ export default function SmartImport({ backtestId, onComplete }) {
       <div className="flex items-center gap-2">
         <Sparkles size={16} className="text-cyan" />
         <h3 className="font-display font-semibold text-cyan">AI Smart Import</h3>
-        <span className="text-xs text-ink-secondary">— drop a TradingView screenshot, Claude reads every number</span>
+        <span className="text-xs text-ink-secondary">— drop a TradingView screenshot, Gemini reads every number</span>
       </div>
 
       <div
@@ -104,7 +104,7 @@ export default function SmartImport({ backtestId, onComplete }) {
             {loading && (
               <div className="absolute inset-0 bg-black/60 rounded-lg flex flex-col items-center justify-center gap-2">
                 <div className="w-8 h-8 border-2 border-cyan/20 border-t-cyan rounded-full animate-spin" />
-                <p className="text-sm text-cyan font-mono">Claude is reading your metrics...</p>
+                <p className="text-sm text-cyan font-mono">Gemini is reading your metrics...</p>
               </div>
             )}
           </div>

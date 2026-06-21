@@ -1,10 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
 import multer from "multer";
-import fs from "fs";
 import Backtest from "../models/Backtest.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { getGeminiClient, GEMINI_MODEL, cleanJsonResponse } from "../config/gemini.js";
 
-// Screenshots stay in memory only - we pass them to Claude, don't store them.
+// Screenshots stay in memory only - we pass them to Gemini, don't store them.
 export const uploadScreenshot = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const EXTRACTION_PROMPT = `You are a quantitative research assistant. This is a TradingView Strategy Tester screenshot.
@@ -69,32 +68,25 @@ export const extractFromScreenshot = asyncHandler(async (req, res) => {
     throw new Error("No screenshot received");
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const gemini = getGeminiClient();
+  if (!gemini) {
     res.status(503);
-    throw new Error("ANTHROPIC_API_KEY is not configured on the server. Add it to server/.env to enable AI extraction.");
+    throw new Error("GEMINI_API_KEY is not configured on the server. Add it to server/.env to enable AI extraction (free at https://aistudio.google.com/apikey).");
   }
 
   const base64 = req.file.buffer.toString("base64");
   const mediaType = req.file.mimetype || "image/jpeg";
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text", text: EXTRACTION_PROMPT },
-        ],
-      },
+  const response = await gemini.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: [
+      { inlineData: { mimeType: mediaType, data: base64 } },
+      { text: EXTRACTION_PROMPT },
     ],
   });
 
-  const raw = message.content.find((b) => b.type === "text")?.text || "";
-  const cleaned = raw.replace(/```json|```/g, "").trim();
+  const raw = response.text || "";
+  const cleaned = cleanJsonResponse(raw);
 
   let extracted;
   try {
