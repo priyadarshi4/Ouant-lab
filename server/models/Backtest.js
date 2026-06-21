@@ -89,6 +89,9 @@ const backtestSchema = new mongoose.Schema(
 
     // --- Equity curve raw data points [{t, equity, drawdown}] ---
     equityCurve: [{ t: Date, equity: Number, drawdown: Number, benchmarkEquity: Number }],
+    // Tracks provenance so the UI can label estimated data honestly instead
+    // of presenting it as if it came from real trade-by-trade records.
+    equityCurveSource: { type: String, enum: ["csv", "estimated", "manual"], default: undefined },
 
     // --- Return series for heatmap / yearly chart / rolling metrics ---
     monthlyReturns: [{ month: String, returnPct: Number }], // month e.g. "2024-03"

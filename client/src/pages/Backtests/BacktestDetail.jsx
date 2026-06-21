@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Edit, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Edit, Trash2, X, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { useBacktest, useUpdateBacktest, useDeleteBacktest } from "../../features/backtests/api.js";
 import GlassCard from "../../components/ui/GlassCard.jsx";
 import StatTile from "../../components/ui/StatTile.jsx";
@@ -23,6 +23,14 @@ const BACKTEST_MEDIA_CATEGORIES = [
 ];
 
 const inputClass = "w-full px-3 py-2 rounded-md bg-white/5 border border-white/10 focus:border-cyan/40 outline-none text-sm";
+
+function EstimatedBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-signal-warn/10 border border-signal-warn/30 text-signal-warn text-[10px] font-medium uppercase tracking-wide">
+      <Info size={10} /> Estimated
+    </span>
+  );
+}
 
 // ─── Manual metrics form, collapsible, shown below the SmartImport panel ─────
 function ManualEditForm({ backtest, onClose }) {
@@ -197,6 +205,7 @@ export default function BacktestDetail() {
       <GlassCard glow>
         <SmartImport
           backtestId={id}
+          hasStats={!!bt.metrics?.totalTrades}
           onComplete={() => refetch()}
         />
       </GlassCard>
@@ -268,40 +277,65 @@ export default function BacktestDetail() {
       </div>
 
       {/* Charts */}
+      {bt.equityCurveSource === "estimated" && (
+        <div className="flex items-start gap-2 px-4 py-2.5 rounded-lg bg-signal-warn/10 border border-signal-warn/30 text-signal-warn text-xs">
+          <Info size={14} className="mt-0.5 shrink-0" />
+          <span>
+            The charts below are <strong>estimated</strong> from your saved Win Rate, Avg Win/Loss, and Net Profit —
+            not real trade-by-trade history. Import a CSV from TradingView for exact figures.
+          </span>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-4">
         <GlassCard>
-          <h2 className="font-display font-semibold mb-3">Equity Curve</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-display font-semibold">Equity Curve</h2>
+            {bt.equityCurveSource === "estimated" && <EstimatedBadge />}
+          </div>
           {bt.equityCurve?.length ? (
             <EquityCurveChart data={bt.equityCurve} />
           ) : (
             <p className="text-sm text-ink-secondary py-6 text-center">
-              No equity curve data yet — import a CSV using the Smart Import panel above.
+              No equity curve data yet — use the "Import CSV" or "Generate Estimated Charts" option in the Smart Import panel above.
             </p>
           )}
         </GlassCard>
         <GlassCard>
-          <h2 className="font-display font-semibold mb-3">Drawdown Curve</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-display font-semibold">Drawdown Curve</h2>
+            {bt.equityCurveSource === "estimated" && <EstimatedBadge />}
+          </div>
           {bt.equityCurve?.length ? (
             <DrawdownChart data={bt.equityCurve} />
           ) : (
-            <p className="text-sm text-ink-secondary py-6 text-center">Populated from the same CSV as the equity curve.</p>
+            <p className="text-sm text-ink-secondary py-6 text-center">Populated together with the equity curve above.</p>
           )}
         </GlassCard>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
         <GlassCard>
-          <h2 className="font-display font-semibold mb-3">Monthly Return Heatmap</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-display font-semibold">Monthly Return Heatmap</h2>
+            {bt.equityCurveSource === "estimated" && <EstimatedBadge />}
+          </div>
           <MonthlyReturnHeatmap data={bt.monthlyReturns} />
         </GlassCard>
         <GlassCard>
-          <h2 className="font-display font-semibold mb-3">Yearly Performance</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-display font-semibold">Yearly Performance</h2>
+            {bt.equityCurveSource === "estimated" && <EstimatedBadge />}
+          </div>
           <YearlyReturnsChart data={bt.yearlyReturns} />
         </GlassCard>
       </div>
 
       <GlassCard>
-        <h2 className="font-display font-semibold mb-3">Rolling Metrics</h2>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="font-display font-semibold">Rolling Metrics</h2>
+          {bt.equityCurveSource === "estimated" && <EstimatedBadge />}
+        </div>
         <RollingMetricsChart data={bt.rollingMetrics} />
       </GlassCard>
 

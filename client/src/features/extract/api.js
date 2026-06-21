@@ -39,3 +39,13 @@ export function useImportEquityCsv() {
     },
   });
 }
+
+export function useGenerateEstimatedCharts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (backtestId) => (await axiosClient.post("/extract/generate-charts", { backtestId })).data,
+    onSuccess: (_, backtestId) => {
+      qc.invalidateQueries({ queryKey: ["backtest", backtestId] });
+    },
+  });
+}

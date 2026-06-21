@@ -2,6 +2,7 @@ import multer from "multer";
 import Backtest from "../models/Backtest.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getGeminiClient, GEMINI_MODEL, cleanJsonResponse } from "../config/gemini.js";
+import { generateEstimatedSeries } from "../utils/estimateCharts.js";
 
 // Screenshots stay in memory only - we pass them to Gemini, don't store them.
 export const uploadScreenshot = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -165,7 +166,53 @@ export const extractEquityCsv = asyncHandler(async (req, res) => {
     throw new Error("No valid date,equity rows found. Expected columns: Date, Equity[, Benchmark]");
   }
 
-  await Backtest.findByIdAndUpdate(req.body.backtestId, { equityCurve });
+  await Backtest.findByIdAndUpdate(req.body.backtestId, { equityCurve, equityCurveSource: "csv" });
 
   res.json({ count: equityCurve.length, message: `Imported ${equityCurve.length} equity curve points.` });
+});
+
+// POST /api/extract/generate-charts
+// Body: { backtestId }
+// Synthesizes an equity curve, monthly/yearly returns, and rolling metrics
+// from whatever scalar stats are already saved (total trades, win rate,
+// avg win/loss, net profit). Used when no CSV export is available. The
+// result is explicitly tagged "estimated" - the frontend must show this
+// clearly rather than presenting it as real trade-by-trade history.
+export const generateEstimatedCharts = asyncHandler(async (req, res) => {
+  const { backtestId } = req.body;
+  if (!backtestId) {
+    res.status(400);
+    throw new Error("backtestId is required");
+  }
+
+  const backtest = await Backtest.findById(backtestId);
+  if (!backtest) {
+    res.status(404);
+    throw new Error("Backtest not found");
+  }
+
+  if (!backtest.metrics?.totalTrades) {
+    res.status(422);
+    throw new Error(
+      "Need at least Total Trades saved before charts can be estimated. Fill in Performance Summary and Trade Statistics first (via Smart Import or Manual Edit)."
+    );
+  }
+
+  const series = generateEstimatedSeries(backtest);
+  if (!series) {
+    res.status(422);
+    throw new Error("Not enough saved data to estimate charts from.");
+  }
+
+  backtest.equityCurve = series.equityCurve;
+  backtest.monthlyReturns = series.monthlyReturns;
+  backtest.yearlyReturns = series.yearlyReturns;
+  backtest.rollingMetrics = series.rollingMetrics;
+  backtest.equityCurveSource = "estimated";
+  await backtest.save();
+
+  res.json({
+    message: `Estimated ${series.equityCurve.length} equity points from your saved trade statistics.`,
+    backtest,
+  });
 });

@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
-import { Sparkles, Upload, CheckCircle, AlertCircle, ChevronDown, ChevronUp, FileText } from "lucide-react";
-import { useExtractFromScreenshot, useImportEquityCsv } from "../../features/extract/api.js";
+import { Sparkles, Upload, CheckCircle, AlertCircle, ChevronDown, ChevronUp, FileText, Wand2, Info } from "lucide-react";
+import { useExtractFromScreenshot, useImportEquityCsv, useGenerateEstimatedCharts } from "../../features/extract/api.js";
 
 function MetricPreview({ metrics, meta }) {
   const [showAll, setShowAll] = useState(false);
@@ -35,15 +35,18 @@ function MetricPreview({ metrics, meta }) {
   );
 }
 
-export default function SmartImport({ backtestId, onComplete }) {
+export default function SmartImport({ backtestId, hasStats, onComplete }) {
   const [dragOver, setDragOver] = useState(false);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [chartMsg, setChartMsg] = useState(null);
+  const [chartError, setChartError] = useState(null);
   const screenshotRef = useRef(null);
   const csvRef = useRef(null);
   const extractMutation = useExtractFromScreenshot();
   const csvMutation = useImportEquityCsv();
+  const chartsMutation = useGenerateEstimatedCharts();
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -77,6 +80,18 @@ export default function SmartImport({ backtestId, onComplete }) {
       alert(`CSV import failed: ${err?.response?.data?.message || err.message}`);
     }
     e.target.value = "";
+  };
+
+  const handleGenerateCharts = async () => {
+    setChartMsg(null);
+    setChartError(null);
+    try {
+      const data = await chartsMutation.mutateAsync(backtestId);
+      setChartMsg(data.message);
+      if (onComplete) onComplete();
+    } catch (err) {
+      setChartError(err?.response?.data?.message || err.message || "Could not generate charts");
+    }
   };
 
   const loading = extractMutation.isPending;
@@ -162,19 +177,60 @@ export default function SmartImport({ backtestId, onComplete }) {
         </div>
       )}
 
-      <div className="border-t border-white/10 pt-4 flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-xs text-ink-secondary">
-          <FileText size={14} />
-          <span>Have equity curve data?</span>
+      <div className="border-t border-white/10 pt-4 space-y-3">
+        <p className="text-xs text-ink-secondary">
+          The screenshot above only contains summary numbers (Win Rate, Sharpe, etc.) — TradingView doesn't expose
+          exact trade-by-trade data in a screenshot, so charts need one of these two extra steps:
+        </p>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="rounded-lg border border-white/10 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <FileText size={14} className="text-cyan" /> Have a CSV export?
+            </div>
+            <p className="text-xs text-ink-secondary">Exact equity curve from TradingView's data export. Most accurate option.</p>
+            <button
+              onClick={() => csvRef.current?.click()}
+              disabled={csvMutation.isPending}
+              className="text-xs px-3 py-1.5 rounded-md border border-cyan/30 text-cyan hover:bg-cyan/10 transition-colors w-full"
+            >
+              {csvMutation.isPending ? "Importing..." : "Import CSV (Date, Equity[, Benchmark])"}
+            </button>
+            <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCsv} />
+          </div>
+
+          <div className="rounded-lg border border-white/10 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Wand2 size={14} className="text-cyan" /> No CSV? Estimate instead
+            </div>
+            <p className="text-xs text-ink-secondary">
+              Builds a plausible curve from your saved Win Rate, Avg Win/Loss, and Net Profit. Clearly marked "Estimated" — not real trade history.
+            </p>
+            <button
+              onClick={handleGenerateCharts}
+              disabled={!hasStats || chartsMutation.isPending}
+              className="text-xs px-3 py-1.5 rounded-md border border-cyan/30 text-cyan hover:bg-cyan/10 transition-colors w-full disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {chartsMutation.isPending ? "Generating..." : "Generate Estimated Charts"}
+            </button>
+            {!hasStats && (
+              <p className="text-[11px] text-ink-faint flex items-center gap-1">
+                <Info size={11} /> Extract or enter Total Trades first
+              </p>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => csvRef.current?.click()}
-          disabled={csvMutation.isPending}
-          className="text-xs px-3 py-1.5 rounded-md border border-white/10 text-ink-secondary hover:border-cyan/40 hover:text-cyan transition-colors"
-        >
-          {csvMutation.isPending ? "Importing..." : "Import CSV (Date, Equity[, Benchmark])"}
-        </button>
-        <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCsv} />
+
+        {chartMsg && (
+          <div className="flex items-center gap-2 text-signal-profit text-xs">
+            <CheckCircle size={13} /> {chartMsg}
+          </div>
+        )}
+        {chartError && (
+          <div className="flex items-center gap-2 text-signal-loss text-xs">
+            <AlertCircle size={13} /> {chartError}
+          </div>
+        )}
       </div>
     </div>
   );
