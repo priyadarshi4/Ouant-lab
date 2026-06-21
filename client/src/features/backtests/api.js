@@ -31,7 +31,10 @@ export function useUpdateBacktest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }) => (await axiosClient.put(`/backtests/${id}`, payload)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["backtests"] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["backtests"] });
+      qc.invalidateQueries({ queryKey: ["backtest", vars.id] });
+    },
   });
 }
 

@@ -170,7 +170,7 @@ export default function StrategyForm() {
           <input className={inputClass} value={form.tags} onChange={(e) => updateTop("tags", e.target.value)} placeholder="rsi, divergence, nifty50" />
         </Field>
         <Field label="Cover Image" full>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {form.coverImageUrl && <img src={form.coverImageUrl} alt="cover" className="w-16 h-16 object-cover rounded-md border border-white/10" />}
             <label className="flex items-center gap-2 px-3 py-2 rounded-md border border-cyan/30 text-cyan text-sm cursor-pointer hover:bg-cyan/10 transition-colors">
               <Upload size={14} /> {uploadMutation.isPending ? "Uploading..." : "Upload Cover Image"}

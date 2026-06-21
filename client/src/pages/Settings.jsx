@@ -75,36 +75,40 @@ function ProfileForm({ user }) {
   };
 
   return (
-    <GlassCard className="space-y-5">
-      <div
-        className="h-32 rounded-lg bg-white/5 border border-white/10 relative overflow-hidden"
-        style={user?.bannerUrl ? { backgroundImage: `url(${user.bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
-      >
-        <button
-          onClick={() => bannerInputRef.current?.click()}
-          className="absolute bottom-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-black/60 text-xs text-ink-primary hover:bg-black/80"
+    <GlassCard className="space-y-5 overflow-visible">
+      <div className="relative">
+        <div
+          className="h-24 sm:h-32 rounded-lg bg-white/5 border border-white/10 overflow-hidden"
+          style={user?.bannerUrl ? { backgroundImage: `url(${user.bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
         >
-          <Upload size={12} /> {bannerMutation.isPending ? "Uploading..." : "Banner"}
-        </button>
-        <input ref={bannerInputRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={(e) => e.target.files?.[0] && bannerMutation.mutate(e.target.files[0])} />
+          <button
+            onClick={() => bannerInputRef.current?.click()}
+            className="absolute top-2 right-2 sm:bottom-2 sm:top-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-black/60 text-xs text-ink-primary hover:bg-black/80"
+          >
+            <Upload size={12} /> {bannerMutation.isPending ? "Uploading..." : "Banner"}
+          </button>
+          <input ref={bannerInputRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={(e) => e.target.files?.[0] && bannerMutation.mutate(e.target.files[0])} />
+        </div>
 
-        <div className="absolute -bottom-8 left-4 w-20 h-20 rounded-full border-4 border-panel bg-white/10 overflow-hidden flex items-center justify-center">
+        {/* Avatar sits in this wrapper (no overflow-hidden) so it can overlap
+            the banner's bottom edge without being clipped. */}
+        <div className="absolute -bottom-8 left-4 w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-panel bg-white/10 overflow-hidden flex items-center justify-center">
           {user?.avatarUrl ? (
             <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
           ) : (
-            <span className="font-display text-2xl text-cyan">{user?.name?.[0] || "?"}</span>
+            <span className="font-display text-xl sm:text-2xl text-cyan">{user?.name?.[0] || "?"}</span>
           )}
         </div>
         <button
           onClick={() => avatarInputRef.current?.click()}
-          className="absolute -bottom-8 left-4 w-20 h-20 rounded-full bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center text-transparent hover:text-white text-xs"
+          className="absolute -bottom-8 left-4 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center text-transparent hover:text-white text-xs"
         >
           {avatarMutation.isPending ? "..." : "Edit"}
         </button>
         <input ref={avatarInputRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={(e) => e.target.files?.[0] && avatarMutation.mutate(e.target.files[0])} />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3 pt-6">
+      <form onSubmit={handleSubmit} className="space-y-3 pt-10 sm:pt-8">
         <div className="grid md:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-ink-secondary mb-1">Education</label>

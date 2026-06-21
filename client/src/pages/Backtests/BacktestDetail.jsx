@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Edit, Trash2, X } from "lucide-react";
+import { Edit, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useBacktest, useUpdateBacktest, useDeleteBacktest } from "../../features/backtests/api.js";
 import GlassCard from "../../components/ui/GlassCard.jsx";
 import StatTile from "../../components/ui/StatTile.jsx";
 import Spinner from "../../components/ui/Spinner.jsx";
 import EmptyState from "../../components/ui/EmptyState.jsx";
+import Accordion from "../../components/ui/Accordion.jsx";
 import MediaGallery from "../../components/ui/MediaGallery.jsx";
+import SmartImport from "../../components/ui/SmartImport.jsx";
 import EquityCurveChart from "../../components/charts/EquityCurveChart.jsx";
 import DrawdownChart from "../../components/charts/DrawdownChart.jsx";
 import MonthlyReturnHeatmap from "../../components/charts/MonthlyReturnHeatmap.jsx";
@@ -14,35 +16,51 @@ import YearlyReturnsChart from "../../components/charts/YearlyReturnsChart.jsx";
 import RollingMetricsChart from "../../components/charts/RollingMetricsChart.jsx";
 
 const BACKTEST_MEDIA_CATEGORIES = [
-  "Equity Curve", "Drawdown Curve", "Monthly Returns", "Yearly Returns", "Distribution Curve",
-  "Trade Distribution", "Monte Carlo Analysis", "Walk Forward Results", "Parameter Sensitivity",
-  "Optimization Result", "TradingView Screenshot", "Performance Summary Screenshot", "List of Trades Screenshot", "Other",
+  "Equity Curve","Drawdown Curve","Monthly Returns","Yearly Returns","Distribution Curve",
+  "Trade Distribution","Monte Carlo Analysis","Walk Forward Results","Parameter Sensitivity",
+  "Optimization Result","TradingView Screenshot","Performance Summary Screenshot",
+  "List of Trades Screenshot","Other",
 ];
 
 const inputClass = "w-full px-3 py-2 rounded-md bg-white/5 border border-white/10 focus:border-cyan/40 outline-none text-sm";
 
-function MetricsEditForm({ backtest, onClose }) {
+// ─── Manual metrics form, collapsible, shown below the SmartImport panel ─────
+function ManualEditForm({ backtest, onClose }) {
   const updateMutation = useUpdateBacktest();
   const [form, setForm] = useState({
+    symbol: backtest.symbol || "",
+    timeframe: backtest.timeframe || "",
+    exchange: backtest.exchange || "",
+    dataSource: backtest.dataSource || "",
+    marketPhase: backtest.marketPhase || "Unspecified",
+    positionSizingMethod: backtest.positionSizingMethod || "",
+    initialCapital: backtest.initialCapital ?? "",
+    commission: backtest.commission ?? "",
+    slippage: backtest.slippage ?? "",
     dateRangeStart: backtest.dateRangeStart?.slice(0, 10) || "",
     dateRangeEnd: backtest.dateRangeEnd?.slice(0, 10) || "",
-    marketPhase: backtest.marketPhase || "Unspecified",
-    dataSource: backtest.dataSource || "",
-    positionSizingMethod: backtest.positionSizingMethod || "",
-    metrics: { ...backtest.metrics },
+    metrics: { ...(backtest.metrics || {}) },
   });
 
-  const setMetric = (key, value) => setForm((f) => ({ ...f, metrics: { ...f.metrics, [key]: value === "" ? undefined : Number(value) } }));
+  const setM = (k, v) =>
+    setForm((f) => ({ ...f, metrics: { ...f.metrics, [k]: v === "" ? undefined : Number(v) } }));
 
-  const PERFORMANCE_FIELDS = [
-    "netProfit", "grossProfit", "grossLoss", "buyAndHoldReturn", "maxRunup", "maxDrawdown",
-    "profitFactor", "winRate", "sharpeRatio", "sortinoRatio", "calmarRatio", "recoveryFactor",
-    "expectancy", "averageTrade", "averageWin", "averageLoss", "largestWin", "largestLoss",
+  const PERF = [
+    ["netProfit","Net Profit"],["grossProfit","Gross Profit"],["grossLoss","Gross Loss"],
+    ["buyAndHoldReturn","Buy & Hold %"],["maxRunup","Max Runup %"],["maxDrawdown","Max DD %"],
+    ["profitFactor","Profit Factor"],["winRate","Win Rate %"],["sharpeRatio","Sharpe"],
+    ["sortinoRatio","Sortino"],["calmarRatio","Calmar"],["recoveryFactor","Recovery Factor"],
+    ["expectancy","Expectancy"],["averageTrade","Avg Trade"],["averageWin","Avg Win"],
+    ["averageLoss","Avg Loss"],["largestWin","Largest Win"],["largestLoss","Largest Loss"],
   ];
-  const TRADE_FIELDS = [
-    "totalTrades", "winningTrades", "losingTrades", "longTrades", "shortTrades",
-    "longWinRate", "shortWinRate", "averageBarsInTrade", "averageHoldingDays", "averageHoldingHours",
-    "consecutiveWins", "consecutiveLosses", "largestWinStreak", "largestLossStreak",
+  const TRADE = [
+    ["totalTrades","Total Trades"],["winningTrades","Winning"],["losingTrades","Losing"],
+    ["longTrades","Long"],["shortTrades","Short"],
+    ["longWinRate","Long Win %"],["shortWinRate","Short Win %"],
+    ["averageBarsInTrade","Avg Bars"],["averageHoldingDays","Avg Days"],
+    ["averageHoldingHours","Avg Hours"],["consecutiveWins","Consec. Wins"],
+    ["consecutiveLosses","Consec. Losses"],["largestWinStreak","Win Streak"],
+    ["largestLossStreak","Loss Streak"],
   ];
 
   const handleSubmit = async (e) => {
@@ -52,60 +70,70 @@ function MetricsEditForm({ backtest, onClose }) {
   };
 
   return (
-    <GlassCard glow className="space-y-5">
+    <GlassCard className="space-y-5">
       <div className="flex justify-between items-center">
-        <h2 className="font-display font-semibold text-cyan">Edit Backtest Metrics</h2>
-        <button onClick={onClose}><X size={18} className="text-ink-secondary" /></button>
+        <h3 className="font-display font-semibold text-cyan">Manual Edit</h3>
+        <button onClick={onClose}><X size={16} className="text-ink-secondary" /></button>
       </div>
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="grid md:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-xs text-ink-secondary mb-1">Start Date</label>
-            <input type="date" className={inputClass} value={form.dateRangeStart} onChange={(e) => setForm({ ...form, dateRangeStart: e.target.value })} />
-          </div>
-          <div>
-            <label className="block text-xs text-ink-secondary mb-1">End Date</label>
-            <input type="date" className={inputClass} value={form.dateRangeEnd} onChange={(e) => setForm({ ...form, dateRangeEnd: e.target.value })} />
-          </div>
-          <div>
-            <label className="block text-xs text-ink-secondary mb-1">Market Phase</label>
-            <select className={inputClass} value={form.marketPhase} onChange={(e) => setForm({ ...form, marketPhase: e.target.value })}>
-              {["Unspecified", "Bull", "Bear", "Sideways", "Mixed"].map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-ink-secondary mb-1">Data Source</label>
-            <input className={inputClass} value={form.dataSource} onChange={(e) => setForm({ ...form, dataSource: e.target.value })} />
+        <div>
+          <p className="text-xs uppercase tracking-wide text-ink-secondary mb-2">Setup</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {[["symbol","Symbol"],["timeframe","Timeframe"],["exchange","Exchange"],["dataSource","Data Source"]].map(([k,l]) => (
+              <div key={k}>
+                <label className="block text-[10px] text-ink-secondary mb-1">{l}</label>
+                <input className={inputClass} value={form[k]||""} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} />
+              </div>
+            ))}
+            <div>
+              <label className="block text-[10px] text-ink-secondary mb-1">Start Date</label>
+              <input type="date" className={inputClass} value={form.dateRangeStart} onChange={e=>setForm(f=>({...f,dateRangeStart:e.target.value}))} />
+            </div>
+            <div>
+              <label className="block text-[10px] text-ink-secondary mb-1">End Date</label>
+              <input type="date" className={inputClass} value={form.dateRangeEnd} onChange={e=>setForm(f=>({...f,dateRangeEnd:e.target.value}))} />
+            </div>
+            <div>
+              <label className="block text-[10px] text-ink-secondary mb-1">Market Phase</label>
+              <select className={inputClass} value={form.marketPhase} onChange={e=>setForm(f=>({...f,marketPhase:e.target.value}))}>
+                {["Unspecified","Bull","Bear","Sideways","Mixed"].map(p=><option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] text-ink-secondary mb-1">Initial Capital</label>
+              <input type="number" className={inputClass} value={form.initialCapital} onChange={e=>setForm(f=>({...f,initialCapital:e.target.value}))} />
+            </div>
           </div>
         </div>
 
         <div>
-          <h3 className="text-sm font-display text-cyan mb-2">Performance Summary</h3>
-          <div className="grid md:grid-cols-4 gap-3">
-            {PERFORMANCE_FIELDS.map((key) => (
-              <div key={key}>
-                <label className="block text-[11px] text-ink-secondary mb-1 capitalize">{key.replace(/([A-Z])/g, " $1")}</label>
-                <input type="number" step="0.01" className={inputClass} value={form.metrics[key] ?? ""} onChange={(e) => setMetric(key, e.target.value)} />
+          <p className="text-xs uppercase tracking-wide text-ink-secondary mb-2">Performance Summary</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {PERF.map(([k,l])=>(
+              <div key={k}>
+                <label className="block text-[10px] text-ink-secondary mb-1">{l}</label>
+                <input type="number" step="any" className={inputClass} value={form.metrics[k]??""} onChange={e=>setM(k,e.target.value)} />
               </div>
             ))}
           </div>
         </div>
 
         <div>
-          <h3 className="text-sm font-display text-cyan mb-2">Trade Statistics</h3>
-          <div className="grid md:grid-cols-4 gap-3">
-            {TRADE_FIELDS.map((key) => (
-              <div key={key}>
-                <label className="block text-[11px] text-ink-secondary mb-1 capitalize">{key.replace(/([A-Z])/g, " $1")}</label>
-                <input type="number" step="0.01" className={inputClass} value={form.metrics[key] ?? ""} onChange={(e) => setMetric(key, e.target.value)} />
+          <p className="text-xs uppercase tracking-wide text-ink-secondary mb-2">Trade Statistics</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {TRADE.map(([k,l])=>(
+              <div key={k}>
+                <label className="block text-[10px] text-ink-secondary mb-1">{l}</label>
+                <input type="number" step="any" className={inputClass} value={form.metrics[k]??""} onChange={e=>setM(k,e.target.value)} />
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <button type="submit" disabled={updateMutation.isPending} className="px-5 py-2 rounded-md bg-cyan text-void font-display font-semibold text-sm hover:shadow-glow transition-shadow">
-            Save Metrics
+        <div className="flex justify-end pt-2">
+          <button type="submit" disabled={updateMutation.isPending}
+            className="px-5 py-2 rounded-md bg-cyan text-void font-display font-semibold text-sm hover:shadow-glow transition-shadow disabled:opacity-60">
+            {updateMutation.isPending ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>
@@ -113,12 +141,13 @@ function MetricsEditForm({ backtest, onClose }) {
   );
 }
 
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function BacktestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data, isLoading } = useBacktest(id);
+  const { data, isLoading, refetch } = useBacktest(id);
   const deleteMutation = useDeleteBacktest();
-  const [editing, setEditing] = useState(false);
+  const [showManual, setShowManual] = useState(false);
 
   if (isLoading) return <Spinner label="Loading backtest record..." />;
   if (!data?.backtest) return <EmptyState title="Backtest not found" />;
@@ -134,48 +163,68 @@ export default function BacktestDetail() {
   };
 
   const duration = bt.dateRangeStart && bt.dateRangeEnd
-    ? `${Math.round((new Date(bt.dateRangeEnd) - new Date(bt.dateRangeStart)) / (1000 * 60 * 60 * 24))} days`
+    ? `${Math.round((new Date(bt.dateRangeEnd) - new Date(bt.dateRangeStart)) / 86400000)} days`
     : "—";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-5xl">
+      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold">
-            <Link to={`/strategies/${bt.strategy?._id}`} className="hover:text-cyan transition-colors">{bt.strategy?.name}</Link>
-            <span className="text-ink-secondary text-lg ml-2">· {bt.symbol}</span>
+          <h1 className="font-display text-xl sm:text-2xl font-semibold flex flex-wrap items-center gap-2">
+            <Link to={`/strategies/${bt.strategy?._id}`} className="hover:text-cyan transition-colors">
+              {bt.strategy?.name}
+            </Link>
+            <span className="text-ink-secondary font-normal text-lg">· {bt.symbol}</span>
           </h1>
-          <p className="text-ink-secondary text-sm mt-1">{bt.exchange} · {bt.timeframe} · {bt.marketPhase || "Unspecified"} regime</p>
+          <p className="text-ink-secondary text-sm mt-1">
+            {bt.exchange} · {bt.timeframe} · {bt.marketPhase || "Unspecified"} regime
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setEditing((e) => !e)} className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-white/10 text-sm hover:border-cyan/40">
-            <Edit size={14} /> Edit Metrics
+          <button onClick={() => setShowManual(s => !s)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-white/10 text-sm hover:border-cyan/40">
+            <Edit size={14} /> {showManual ? "Hide" : "Manual Edit"}
           </button>
-          <button onClick={handleDelete} className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-white/10 text-sm text-signal-loss hover:border-signal-loss/40">
+          <button onClick={handleDelete}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-white/10 text-sm text-signal-loss hover:border-signal-loss/40">
             <Trash2 size={14} /> Delete
           </button>
         </div>
       </div>
 
-      {editing && <MetricsEditForm backtest={bt} onClose={() => setEditing(false)} />}
+      {/* ─── AI SMART IMPORT — the primary data-entry method ─────────────── */}
+      <GlassCard glow>
+        <SmartImport
+          backtestId={id}
+          onComplete={() => refetch()}
+        />
+      </GlassCard>
 
+      {/* Manual edit form — collapsible, for fine-tuning */}
+      {showManual && (
+        <ManualEditForm backtest={bt} onClose={() => { setShowManual(false); refetch(); }} />
+      )}
+
+      {/* Date Information */}
       <GlassCard>
-        <h2 className="font-display font-semibold mb-4">Date Information</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div><div className="text-ink-secondary text-xs">Start</div>{bt.dateRangeStart ? new Date(bt.dateRangeStart).toLocaleDateString() : "—"}</div>
-          <div><div className="text-ink-secondary text-xs">End</div>{bt.dateRangeEnd ? new Date(bt.dateRangeEnd).toLocaleDateString() : "—"}</div>
-          <div><div className="text-ink-secondary text-xs">Duration</div>{duration}</div>
-          <div><div className="text-ink-secondary text-xs">Data Source</div>{bt.dataSource || "—"}</div>
-          <div><div className="text-ink-secondary text-xs">Initial Capital</div>{bt.initialCapital ?? "—"}</div>
-          <div><div className="text-ink-secondary text-xs">Commission</div>{bt.commission ?? "—"}</div>
-          <div><div className="text-ink-secondary text-xs">Slippage</div>{bt.slippage ?? "—"}</div>
-          <div><div className="text-ink-secondary text-xs">Position Sizing</div>{bt.positionSizingMethod || bt.positionSize || "—"}</div>
+        <h2 className="font-display font-semibold mb-3">Date Information</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+          <div><div className="text-ink-secondary text-xs mb-0.5">Start</div>{bt.dateRangeStart ? new Date(bt.dateRangeStart).toLocaleDateString() : "—"}</div>
+          <div><div className="text-ink-secondary text-xs mb-0.5">End</div>{bt.dateRangeEnd ? new Date(bt.dateRangeEnd).toLocaleDateString() : "—"}</div>
+          <div><div className="text-ink-secondary text-xs mb-0.5">Duration</div>{duration}</div>
+          <div><div className="text-ink-secondary text-xs mb-0.5">Data Source</div>{bt.dataSource || "—"}</div>
+          <div><div className="text-ink-secondary text-xs mb-0.5">Initial Capital</div>{bt.initialCapital ?? "—"}</div>
+          <div><div className="text-ink-secondary text-xs mb-0.5">Commission</div>{bt.commission ?? "—"}</div>
+          <div><div className="text-ink-secondary text-xs mb-0.5">Slippage</div>{bt.slippage ?? "—"}</div>
+          <div><div className="text-ink-secondary text-xs mb-0.5">Position Sizing</div>{bt.positionSizingMethod || bt.positionSize || "—"}</div>
         </div>
       </GlassCard>
 
+      {/* Performance Summary */}
       <div>
         <h2 className="font-display font-semibold mb-3">Performance Summary</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           <StatTile label="Net Profit" value={m.netProfit ?? "—"} accent="profit" />
           <StatTile label="Gross Profit" value={m.grossProfit ?? "—"} accent="profit" />
           <StatTile label="Gross Loss" value={m.grossLoss ?? "—"} accent="loss" />
@@ -197,34 +246,46 @@ export default function BacktestDetail() {
         </div>
       </div>
 
+      {/* Trade Statistics */}
       <div>
         <h2 className="font-display font-semibold mb-3">Trade Statistics</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           <StatTile label="Total Trades" value={m.totalTrades ?? "—"} accent="cyan" />
           <StatTile label="Winning" value={m.winningTrades ?? "—"} accent="profit" />
           <StatTile label="Losing" value={m.losingTrades ?? "—"} accent="loss" />
           <StatTile label="Long Trades" value={m.longTrades ?? "—"} accent="blue" />
           <StatTile label="Short Trades" value={m.shortTrades ?? "—"} accent="blue" />
-          <StatTile label="Long Win Rate" value={m.longWinRate ?? "—"} suffix="%" accent="profit" />
-          <StatTile label="Short Win Rate" value={m.shortWinRate ?? "—"} suffix="%" accent="profit" />
-          <StatTile label="Avg Bars/Trade" value={m.averageBarsInTrade ?? "—"} accent="cyan" />
-          <StatTile label="Avg Holding Days" value={m.averageHoldingDays ?? "—"} accent="cyan" />
-          <StatTile label="Avg Holding Hours" value={m.averageHoldingHours ?? "—"} accent="cyan" />
-          <StatTile label="Consecutive Wins" value={m.consecutiveWins ?? "—"} accent="profit" />
-          <StatTile label="Consecutive Losses" value={m.consecutiveLosses ?? "—"} accent="loss" />
-          <StatTile label="Largest Win Streak" value={m.largestWinStreak ?? "—"} accent="profit" />
-          <StatTile label="Largest Loss Streak" value={m.largestLossStreak ?? "—"} accent="loss" />
+          <StatTile label="Long Win %" value={m.longWinRate ?? "—"} suffix="%" accent="profit" />
+          <StatTile label="Short Win %" value={m.shortWinRate ?? "—"} suffix="%" accent="profit" />
+          <StatTile label="Avg Bars" value={m.averageBarsInTrade ?? "—"} accent="cyan" />
+          <StatTile label="Avg Days" value={m.averageHoldingDays ?? "—"} accent="cyan" />
+          <StatTile label="Avg Hours" value={m.averageHoldingHours ?? "—"} accent="cyan" />
+          <StatTile label="Consec. Wins" value={m.consecutiveWins ?? "—"} accent="profit" />
+          <StatTile label="Consec. Losses" value={m.consecutiveLosses ?? "—"} accent="loss" />
+          <StatTile label="Win Streak" value={m.largestWinStreak ?? "—"} accent="profit" />
+          <StatTile label="Loss Streak" value={m.largestLossStreak ?? "—"} accent="loss" />
         </div>
       </div>
 
+      {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-4">
         <GlassCard>
           <h2 className="font-display font-semibold mb-3">Equity Curve</h2>
-          <EquityCurveChart data={bt.equityCurve} />
+          {bt.equityCurve?.length ? (
+            <EquityCurveChart data={bt.equityCurve} />
+          ) : (
+            <p className="text-sm text-ink-secondary py-6 text-center">
+              No equity curve data yet — import a CSV using the Smart Import panel above.
+            </p>
+          )}
         </GlassCard>
         <GlassCard>
           <h2 className="font-display font-semibold mb-3">Drawdown Curve</h2>
-          <DrawdownChart data={bt.equityCurve} />
+          {bt.equityCurve?.length ? (
+            <DrawdownChart data={bt.equityCurve} />
+          ) : (
+            <p className="text-sm text-ink-secondary py-6 text-center">Populated from the same CSV as the equity curve.</p>
+          )}
         </GlassCard>
       </div>
 
@@ -246,6 +307,7 @@ export default function BacktestDetail() {
 
       <GlassCard>
         <h2 className="font-display font-semibold mb-3">Media Gallery</h2>
+        <p className="text-xs text-ink-secondary mb-3">Store TradingView screenshots, chart exports, and PDF reports alongside this backtest.</p>
         <MediaGallery relatedBacktest={bt._id} categories={BACKTEST_MEDIA_CATEGORIES} />
       </GlassCard>
 

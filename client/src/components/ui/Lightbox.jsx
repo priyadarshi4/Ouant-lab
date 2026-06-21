@@ -32,7 +32,7 @@ export default function Lightbox({ images, index, onClose, onNavigate }) {
         </button>
       </div>
 
-      <div className="flex-1 flex items-center justify-center relative overflow-auto px-12">
+      <div className="flex-1 flex items-center justify-center relative overflow-auto px-4 sm:px-12">
         {images.length > 1 && (
           <button
             onClick={() => onNavigate((index - 1 + images.length) % images.length)}

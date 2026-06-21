@@ -180,5 +180,6 @@ Everything else is functional end to end: auth, CRUD across all resources,
 KaTeX math rendering, version control with rollback, the research-paper
 strategy layout, the full backtest metrics model with charts, the 10-strategy
 comparison engine, report auto-generation and multi-format export, the
+
 profile system, and the knowledge graph.
 
