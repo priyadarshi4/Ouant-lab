@@ -1,5 +1,6 @@
 import ResearchNote from "../models/ResearchNote.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { logTimelineEvent } from "./timelineController.js";
 
 export const getResearchNotes = asyncHandler(async (req, res) => {
   const { strategy, type } = req.query;
@@ -15,6 +16,9 @@ export const getResearchNotes = asyncHandler(async (req, res) => {
 
 export const createResearchNote = asyncHandler(async (req, res) => {
   const note = await ResearchNote.create({ ...req.body, author: req.user._id });
+  if (note.strategy) {
+    await logTimelineEvent(note.strategy, "Research Note Added", `"${note.title}" (${note.type})`, req.user._id);
+  }
   res.status(201).json({ note });
 });
 

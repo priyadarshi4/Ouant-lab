@@ -102,6 +102,14 @@ export default function StrategiesList() {
                   </span>
                 ))}
               </div>
+              <div className="flex gap-2 pt-1">
+                <Link to={`/workspace/${s._id}`} className="text-[11px] px-2.5 py-1 rounded-md border border-cyan/30 text-cyan hover:bg-cyan/10 transition-colors">
+                  Workspace
+                </Link>
+                <Link to={`/strategies/${s._id}`} className="text-[11px] px-2.5 py-1 rounded-md border border-white/10 text-ink-secondary hover:border-white/20 transition-colors">
+                  Research Paper
+                </Link>
+              </div>
             </GlassCard>
           ))}
         </div>

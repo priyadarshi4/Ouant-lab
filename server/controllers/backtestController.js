@@ -1,21 +1,7 @@
 import Backtest from "../models/Backtest.js";
-import Strategy from "../models/Strategy.js";
-import CodeVersion from "../models/CodeVersion.js";
-import Attachment from "../models/Attachment.js";
 import asyncHandler from "../utils/asyncHandler.js";
-
-const touchResearchScore = async (strategyId) => {
-  if (!strategyId) return;
-  const strategy = await Strategy.findById(strategyId);
-  if (!strategy) return;
-  const [codeCount, backtestCount, attachmentCount] = await Promise.all([
-    CodeVersion.countDocuments({ strategy: strategyId }),
-    Backtest.countDocuments({ strategy: strategyId }),
-    Attachment.countDocuments({ relatedStrategy: strategyId }),
-  ]);
-  strategy.computeResearchScore(codeCount, backtestCount, attachmentCount);
-  await strategy.save();
-};
+import { recomputeStrategyDerivedFields } from "../utils/recomputeStrategy.js";
+import { logTimelineEvent } from "./timelineController.js";
 
 // GET /api/backtests?strategy=&symbol=&timeframe=
 export const getBacktests = asyncHandler(async (req, res) => {
@@ -41,7 +27,8 @@ export const getBacktestById = asyncHandler(async (req, res) => {
 // POST /api/backtests
 export const createBacktest = asyncHandler(async (req, res) => {
   const backtest = await Backtest.create(req.body);
-  await touchResearchScore(backtest.strategy);
+  await recomputeStrategyDerivedFields(backtest.strategy);
+  await logTimelineEvent(backtest.strategy, "Backtest Added", `New backtest logged: ${backtest.symbol} / ${backtest.timeframe}`, req.user._id);
   res.status(201).json({ backtest });
 });
 
@@ -55,6 +42,7 @@ export const updateBacktest = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Backtest not found");
   }
+  await recomputeStrategyDerivedFields(backtest.strategy);
   res.json({ backtest });
 });
 
@@ -65,6 +53,6 @@ export const deleteBacktest = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Backtest not found");
   }
-  await touchResearchScore(backtest.strategy);
+  await recomputeStrategyDerivedFields(backtest.strategy);
   res.json({ message: "Backtest deleted" });
 });

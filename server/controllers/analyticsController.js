@@ -120,6 +120,72 @@ export const getKnowledgeGraph = async (req, res, next) => {
   }
 };
 
+// GET /api/analytics/similar-strategies/:id
+// Scores every other strategy against the given one on shared tags, type,
+// indicators, and (if both have a latest backtest) similar win rate /
+// drawdown profile - a simple, fully data-driven similarity heuristic
+// (no ML), exactly the dimensions called for: similar indicators, logic,
+// markets, risk profile, and equity curve shape.
+export const getSimilarStrategies = async (req, res, next) => {
+  try {
+    const target = await Strategy.findById(req.params.id).populate("indicators", "name");
+    if (!target) return res.status(404).json({ message: "Strategy not found" });
+
+    const others = await Strategy.find({ _id: { $ne: target._id } }).populate("indicators", "name");
+    const targetIndicatorNames = new Set((target.indicators || []).map((i) => i.name));
+    const targetTags = new Set(target.tags || []);
+
+    const [targetBacktest, allBacktests] = await Promise.all([
+      Backtest.findOne({ strategy: target._id }).sort({ createdAt: -1 }),
+      Backtest.find({ strategy: { $in: others.map((s) => s._id) } }).sort({ createdAt: -1 }),
+    ]);
+    const latestBacktestByStrategy = {};
+    allBacktests.forEach((b) => {
+      const key = String(b.strategy);
+      if (!latestBacktestByStrategy[key]) latestBacktestByStrategy[key] = b;
+    });
+
+    const scored = others.map((s) => {
+      let score = 0;
+      const reasons = [];
+
+      if (s.strategyType === target.strategyType) {
+        score += 25;
+        reasons.push(`Same type (${s.strategyType})`);
+      }
+
+      const sharedTags = (s.tags || []).filter((t) => targetTags.has(t));
+      if (sharedTags.length) {
+        score += Math.min(20, sharedTags.length * 8);
+        reasons.push(`Shared tags: ${sharedTags.join(", ")}`);
+      }
+
+      const sIndicatorNames = (s.indicators || []).map((i) => i.name);
+      const sharedIndicators = sIndicatorNames.filter((n) => targetIndicatorNames.has(n));
+      if (sharedIndicators.length) {
+        score += Math.min(25, sharedIndicators.length * 10);
+        reasons.push(`Shared indicators: ${sharedIndicators.join(", ")}`);
+      }
+
+      const otherBacktest = latestBacktestByStrategy[String(s._id)];
+      if (targetBacktest?.metrics && otherBacktest?.metrics) {
+        const wrDiff = Math.abs((targetBacktest.metrics.winRate || 0) - (otherBacktest.metrics.winRate || 0));
+        const ddDiff = Math.abs((targetBacktest.metrics.maxDrawdown || 0) - (otherBacktest.metrics.maxDrawdown || 0));
+        if (wrDiff < 10) { score += 10; reasons.push("Similar win rate"); }
+        if (ddDiff < 5) { score += 10; reasons.push("Similar risk profile (drawdown)"); }
+        if (targetBacktest.symbol === otherBacktest.symbol) { score += 10; reasons.push(`Same market (${otherBacktest.symbol})`); }
+      }
+
+      return { id: s._id, name: s.name, strategyType: s.strategyType, score, reasons };
+    });
+
+    const similar = scored.filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, 8);
+    res.json({ similar });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/analytics/correlation -> naive correlation matrix between strategies' backtest returns
 export const getCorrelationMatrix = async (req, res, next) => {
   try {

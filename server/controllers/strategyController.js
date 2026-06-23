@@ -4,15 +4,8 @@ import CodeVersion from "../models/CodeVersion.js";
 import Attachment from "../models/Attachment.js";
 import StrategyVersionSnapshot from "../models/StrategyVersionSnapshot.js";
 import asyncHandler from "../utils/asyncHandler.js";
-
-const recomputeResearchScore = async (strategy) => {
-  const [codeCount, backtestCount, attachmentCount] = await Promise.all([
-    CodeVersion.countDocuments({ strategy: strategy._id }),
-    Backtest.countDocuments({ strategy: strategy._id }),
-    Attachment.countDocuments({ relatedStrategy: strategy._id }),
-  ]);
-  strategy.computeResearchScore(codeCount, backtestCount, attachmentCount);
-};
+import { logTimelineEvent } from "./timelineController.js";
+import { recomputeStrategyDerivedFields } from "../utils/recomputeStrategy.js";
 
 // GET /api/strategies?type=&status=&tag=&search=
 export const getStrategies = asyncHandler(async (req, res) => {
@@ -47,9 +40,9 @@ export const getStrategyById = asyncHandler(async (req, res) => {
 // POST /api/strategies
 export const createStrategy = asyncHandler(async (req, res) => {
   const strategy = await Strategy.create({ ...req.body, author: req.user._id });
-  await recomputeResearchScore(strategy);
-  await strategy.save();
-  res.status(201).json({ strategy });
+  await recomputeStrategyDerivedFields(strategy._id);
+  await logTimelineEvent(strategy._id, "Strategy Created", `"${strategy.name}" was created`, req.user._id);
+  res.status(201).json({ strategy: await Strategy.findById(strategy._id) });
 });
 
 // PUT /api/strategies/:id
@@ -75,9 +68,11 @@ export const updateStrategy = asyncHandler(async (req, res) => {
     new: true,
     runValidators: true,
   });
-  await recomputeResearchScore(strategy);
-  await strategy.save();
-  res.json({ strategy });
+  await recomputeStrategyDerivedFields(strategy._id);
+  if (updates.description) {
+    await logTimelineEvent(strategy._id, "Description Updated", changeLog || "Strategy description updated", req.user._id);
+  }
+  res.json({ strategy: await Strategy.findById(strategy._id) });
 });
 
 // DELETE /api/strategies/:id

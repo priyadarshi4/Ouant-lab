@@ -6,6 +6,7 @@ import Backtest from "../models/Backtest.js";
 import ResearchNote from "../models/ResearchNote.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getGeminiClient, GEMINI_MODEL, cleanJsonResponse } from "../config/gemini.js";
+import { logTimelineEvent } from "./timelineController.js";
 
 const SECTION_ORDER = [
   ["executiveSummary", "Executive Summary"],
@@ -103,6 +104,7 @@ export const getReports = asyncHandler(async (req, res) => {
 
 export const createReport = asyncHandler(async (req, res) => {
   const report = await Report.create({ ...req.body, generatedBy: req.user._id });
+  await logTimelineEvent(report.strategy, "Report Generated", `"${report.title}" saved`, req.user._id);
   res.status(201).json({ report });
 });
 

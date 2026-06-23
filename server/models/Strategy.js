@@ -22,6 +22,53 @@ const formulaSchema = new mongoose.Schema(
   { _id: true }
 );
 
+// AI Strategy Analyst output - a full professional-quant-style review,
+// regenerated on demand from the strategy's current documentation,
+// latest backtest, and research notes.
+const aiAnalysisSchema = new mongoose.Schema(
+  {
+    executiveSummary: String,
+    strengths: String,
+    weaknesses: String,
+    riskAssessment: String,
+    failureRegimes: String,
+    robustnessAnalysis: String,
+    overfittingAssessment: String,
+    marketSuitability: String,
+    positionSizingSuggestions: String,
+    portfolioSuitability: String,
+    potentialImprovements: String,
+    expectedFutureRisks: String,
+    generatedAt: Date,
+  },
+  { _id: false }
+);
+
+// Pine Script Intelligence Engine output - structured extraction from a
+// pasted Pine Script, plus an "applied" flag so the UI knows whether the
+// extraction has been used to auto-fill the strategy's fields yet.
+const pineScriptAnalysisSchema = new mongoose.Schema(
+  {
+    indicators: [String],
+    parameters: String,
+    entryConditions: String,
+    exitConditions: String,
+    riskManagement: String,
+    positionSizing: String,
+    timeframes: String,
+    marketType: String,
+    plainEnglishExplanation: String,
+    tradingHypothesis: String,
+    expectedEdge: String,
+    possibleWeaknesses: String,
+    suggestedImprovements: String,
+    sourceCodeVersion: { type: mongoose.Schema.Types.ObjectId, ref: "CodeVersion" },
+    appliedToStrategy: { type: Boolean, default: false },
+    generatedAt: Date,
+  },
+  { _id: false }
+);
+
 const strategySchema = new mongoose.Schema(
   {
     // --- Basic Information ---
@@ -119,6 +166,16 @@ const strategySchema = new mongoose.Schema(
 
     scorecard: { type: scorecardSchema, default: () => ({}) },
 
+    // --- Strategy Maturity Engine (auto-classified, data-driven) ---
+    maturityStage: {
+      type: String,
+      enum: ["Idea", "Prototype", "Backtested", "Validated", "Walk Forward Tested", "Paper Trading", "Live Candidate", "Live Ready"],
+      default: "Idea",
+    },
+
+    aiAnalysis: { type: aiAnalysisSchema, default: () => ({}) },
+    pineScriptAnalysis: { type: pineScriptAnalysisSchema, default: () => ({}) },
+
     isFavorite: { type: Boolean, default: false },
   },
   { timestamps: true }
@@ -145,6 +202,45 @@ strategySchema.methods.computeResearchScore = function (codeVersionCount = 0, ba
 
   this.researchScore = Math.round(docScore + sectionScore + mathScore + codeScore + backtestScore + mediaScore);
   return this.researchScore;
+};
+
+// Strategy Maturity Engine - classifies the strategy's lifecycle stage from
+// objective signals only (never set manually). Each stage requires the
+// previous stage's conditions plus one more piece of concrete evidence.
+// `ctx` is gathered by the controller from related collections:
+//   { hasCode, backtestCount, bestBacktest, hasWalkForward,
+//     paperTradeCount, paperRealizedPnl }
+strategySchema.methods.computeMaturityStage = function (ctx = {}) {
+  const {
+    hasCode = false,
+    backtestCount = 0,
+    bestBacktest = null,
+    hasWalkForward = false,
+    paperTradeCount = 0,
+    paperRealizedPnl = 0,
+  } = ctx;
+
+  const doc = this.documentation?.toObject?.() || this.documentation || {};
+  const entry = this.entryConditions?.toObject?.() || this.entryConditions || {};
+  const hasCoreThesis = !!(doc.coreIdea?.trim().length > 10 && doc.hypothesis?.trim().length > 10);
+  const hasEntryLogic = !!(entry.longEntryRules?.trim().length > 5 || entry.shortEntryRules?.trim().length > 5);
+  const hasBacktest = backtestCount > 0 && (bestBacktest?.metrics?.totalTrades || 0) > 0;
+  const isValidated = backtestCount >= 2 && (this.researchScore || 0) >= 50;
+  const isPaperTrading = paperTradeCount > 0;
+  const isLiveCandidate = paperTradeCount >= 20 && paperRealizedPnl > 0;
+  const isLiveReady = isLiveCandidate && hasWalkForward && this.status === "Live";
+
+  let stage = "Idea";
+  if (hasCoreThesis && hasEntryLogic && (hasCode || (this.indicators?.length || 0) > 0)) stage = "Prototype";
+  if (stage === "Prototype" && hasBacktest) stage = "Backtested";
+  if (stage === "Backtested" && isValidated) stage = "Validated";
+  if (stage === "Validated" && hasWalkForward) stage = "Walk Forward Tested";
+  if (stage === "Walk Forward Tested" && isPaperTrading) stage = "Paper Trading";
+  if (stage === "Paper Trading" && isLiveCandidate) stage = "Live Candidate";
+  if (stage === "Live Candidate" && isLiveReady) stage = "Live Ready";
+
+  this.maturityStage = stage;
+  return stage;
 };
 
 export default mongoose.model("Strategy", strategySchema);

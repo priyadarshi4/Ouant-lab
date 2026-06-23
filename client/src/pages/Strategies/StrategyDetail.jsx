@@ -114,6 +114,9 @@ export default function StrategyDetail() {
             <button onClick={() => toggleFavorite.mutate(id)} className="p-2 rounded-md border border-white/10 hover:border-signal-warn/40">
               <Star size={16} className={strategy.isFavorite ? "fill-signal-warn text-signal-warn" : "text-ink-faint"} />
             </button>
+            <Link to={`/workspace/${id}`} className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-cyan/30 text-cyan text-sm hover:bg-cyan/10 transition-colors">
+              <FlaskConical size={14} /> Workspace
+            </Link>
             <Link to={`/strategies/${id}/edit`} className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-white/10 text-sm hover:border-cyan/40">
               <Edit size={14} /> Edit
             </Link>
