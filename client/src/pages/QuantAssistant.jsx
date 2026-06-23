@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Sparkles, Send, RotateCcw, Atom } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAssistantChat } from "../../features/assistant/api.js";
+import { useAssistantChat } from "../features/assistant/api";
 
 const SUGGESTED_QUESTIONS = [
   "Which strategy has the highest Sharpe ratio?",
